@@ -59,8 +59,8 @@ void FadeOutMusic(Music music_stream) {
 int main()
 {
 	// Set screen size here
-	const float WIDTH = 800.0f;
-	const float HEIGHT = 600.0f;
+	const float WIDTH = 1600.0f;
+	const float HEIGHT = 1200.0f;
 
 	// Declare some font size constants
 	const float TITLE_SIZE = 72.0f;
@@ -68,10 +68,10 @@ int main()
 	const float CONTROLS_SIZE = 20.0f;
 
 	// Hide FPS initially
-	bool show_fps = false;
+	bool show_fps = true;
 
 	// Initialize window
-	InitWindow(WIDTH, HEIGHT, "Le Pong");
+	InitWindow(WIDTH, HEIGHT, "DUFFMASTERPONG");
 
 	// Set vsync to cap framerate
 	SetWindowState(FLAG_VSYNC_HINT);
@@ -89,7 +89,7 @@ int main()
 	Ball ball{};
 	ball.posX = GetScreenWidth() / 2.0f;
 	ball.posY = GetScreenHeight() / 2.0f;
-	ball.radius = 5.0f;
+	ball.radius = 8.0f;
 	ball.speedX = 300.0f;
 	ball.speedY = 300.0f;
 
@@ -296,7 +296,7 @@ int main()
 				WINNER_TEXT = nullptr;
 
 				// Set the title text to show the title screen
-				TITLE_TEXT = "LE PONG";
+				TITLE_TEXT = "DUFF PONG BITCH";
 			}
 
 			// Draw the ball and paddles
