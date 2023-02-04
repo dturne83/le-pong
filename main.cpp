@@ -45,17 +45,45 @@ struct Paddle
 	}
 };
 
+
+void FadeOutMusic(Music music_stream) {
+	// Lower the volume from 1 to 0 over the course of 2 seconds
+	for (float i = 10000.0f; i > 0; i--) {
+		SetMusicVolume(music_stream, i/100);
+	}
+	// Stop the music stream to restart the song next time we are at the title screen
+	StopMusicStream(music_stream);
+	SetMusicVolume(music_stream, 1);
+}
+
 int main()
 {
 	// Set screen size here
 	const float WIDTH = 800.0f;
 	const float HEIGHT = 600.0f;
 
+	// Declare some font size constants
+	const float TITLE_SIZE = 72.0f;
+	const float START_MSG_SIZE = 30.0f;
+	const float CONTROLS_SIZE = 20.0f;
+
 	// Hide FPS initially
 	bool show_fps = false;
 
+	// Initialize window
 	InitWindow(WIDTH, HEIGHT, "Le Pong");
+
+	// Set vsync to cap framerate
 	SetWindowState(FLAG_VSYNC_HINT);
+
+	// Initialize audio device
+	InitAudioDevice();
+
+	// Declare our audio files
+	const Music TITLE_MUSIC = LoadMusicStream("resources/title.mp3");
+	const Sound PADDLE_HIT_FX = LoadSound("resources/paddle_hit.mp3");
+	const Sound WINNER_FX = LoadSound("resources/winner_sound.mp3");
+	//Sound crowd_fx = LoadSound("resources/crowd_cheering.mp3");
 
 	// Create our ball
 	Ball ball{};
@@ -82,15 +110,16 @@ int main()
 	right_paddle.speed = 500;
 
 	// Create message strings
-	const char* winner_text = nullptr; // this is a null pointer on purpose, we use it to check for a win condition
-	const char* title_text = "LE PONG";
-	const char* start_msg = "Press Space to play, Esc to quit";
-	const char* controls_msg = "Use W and S to control left paddle, Up and Down to control right paddle";
-	const char* restart_msg = "Press space to play again, B to go back to title screen";
+	const char* WINNER_TEXT = nullptr; // this is a null pointer on purpose, we use it to check for a win condition
+	const char* TITLE_TEXT = "LE PONG";
+	const char* START_MSG = "Press Space to play, Esc to quit";
+	const char* CONTROLS_MSG = "Use W and S to control left paddle, Up and Down to control right paddle";
+	const char* RESTART_MSG = "Press space to play again, B to go back to title screen";
 
 
 	while (!WindowShouldClose())
 	{
+
 		// Begin drawing the game
 		BeginDrawing();
 
@@ -98,28 +127,41 @@ int main()
 		ClearBackground(BLACK);
 
 		// Show title screen on first run
-		if (title_text) {
-			int title_width = MeasureText(title_text, 60);
-			int start_msg_width = MeasureText(start_msg, 30);
-			int controls_msg_width = MeasureText(controls_msg, 20);
+		if (TITLE_TEXT) {
+			// Stop any other playing sounds and start the title music stream
+			StopSound(WINNER_FX);
+			PlayMusicStream(TITLE_MUSIC);
+			UpdateMusicStream(TITLE_MUSIC);
+			
+			int title_width = MeasureText(TITLE_TEXT, TITLE_SIZE);
+			int start_msg_width = MeasureText(START_MSG, START_MSG_SIZE);
+			int controls_msg_width = MeasureText(CONTROLS_MSG, CONTROLS_SIZE);
 
 			// Draw title screen text
-			DrawText(title_text, (GetScreenWidth() / 2.0f) - (title_width / 2), (GetScreenHeight() / 2.0f) - 100, 60, GREEN);
-			DrawText(start_msg, (GetScreenWidth() / 2.0f) - (start_msg_width / 2), (GetScreenHeight() / 2.0f) + 120, 30, WHITE);
-			DrawText(controls_msg, (GetScreenWidth() / 2.0f) - (controls_msg_width / 2), (GetScreenHeight() / 2.0f) + 180, 20, WHITE);
+			DrawText(TITLE_TEXT, (GetScreenWidth() / 2.0f) - (title_width / 2), (GetScreenHeight() / 2.0f) - 100, TITLE_SIZE, GREEN);
+			DrawText(START_MSG, (GetScreenWidth() / 2.0f) - (start_msg_width / 2), (GetScreenHeight() / 2.0f) + 120, START_MSG_SIZE, WHITE);
+			DrawText(CONTROLS_MSG, (GetScreenWidth() / 2.0f) - (controls_msg_width / 2), (GetScreenHeight() / 2.0f) + 180, CONTROLS_SIZE, WHITE);
 
 			// Launch the game is the user presses space bar
 			if (IsKeyPressed(KEY_SPACE)) {
-				title_text = nullptr;
+				TITLE_TEXT = nullptr;
 			}
 		}
 		else {
+			// Stop the music stream to restart the song next time we are at the title screen
+			//StopMusicStream(TITLE_MUSIC);
+
+			// Fade out the title music
+			FadeOutMusic(TITLE_MUSIC);
+
 			// Begin moving the ball
 			ball.posX += ball.speedX * GetFrameTime();
 			ball.posY += ball.speedY * GetFrameTime();
 
 			// Bounce the ball off of the top of the screen
 			if (ball.posY > GetScreenHeight()) {
+				// Play sound 
+				PlaySound(PADDLE_HIT_FX);
 				// set ball position to top of screen so it doesn't fly out of the frame
 				ball.posY = GetScreenHeight();
 				// reverse y direction
@@ -128,6 +170,8 @@ int main()
 
 			// Bounce the ball off of the bottom of the screen
 			if (ball.posY < 0) {
+				// Play sound 
+				PlaySound(PADDLE_HIT_FX);
 				// set ball position to bottom of screen so it doesn't fly out of the frame
 				ball.posY = 0;
 				// reverse y direction
@@ -135,7 +179,7 @@ int main()
 			}
 
 			// Move left paddle up with 'W'
-			if (!winner_text && IsKeyDown(KEY_W)) {
+			if (!WINNER_TEXT && IsKeyDown(KEY_W)) {
 				left_paddle.posY -= left_paddle.speed * GetFrameTime();
 				// limit movement of the paddle so half of it stays in the frame
 				// allow half of the paddle to go off screen to allow for deliberate direction changes
@@ -145,7 +189,7 @@ int main()
 			}
 
 			// Move left paddle down with 'S'
-			if (!winner_text && IsKeyDown(KEY_S)) {
+			if (!WINNER_TEXT && IsKeyDown(KEY_S)) {
 				left_paddle.posY += left_paddle.speed * GetFrameTime();
 				// limit movement of the paddle so half of it stays in the frame
 				// allow half of the paddle to go off screen to allow for deliberate direction changes
@@ -155,7 +199,7 @@ int main()
 			}
 
 			// Move right paddle up with 'UP_ARROW'
-			if (!winner_text && IsKeyDown(KEY_UP)) {
+			if (!WINNER_TEXT && IsKeyDown(KEY_UP)) {
 				right_paddle.posY -= right_paddle.speed * GetFrameTime();
 				// allow half of the paddle to go off screen to allow for deliberate direction changes
 				if (right_paddle.posY < 0) {
@@ -164,7 +208,7 @@ int main()
 			}
 
 			// Move right paddle up with 'DOWN_ARROW'
-			if (!winner_text && IsKeyDown(KEY_DOWN)) {
+			if (!WINNER_TEXT && IsKeyDown(KEY_DOWN)) {
 				right_paddle.posY += right_paddle.speed * GetFrameTime();
 				// allow half of the paddle to go off screen to allow for deliberate direction changes
 				if (right_paddle.posY > GetScreenHeight()) {
@@ -174,7 +218,9 @@ int main()
 
 			// Handle collisions with the left paddle
 			if (CheckCollisionCircleRec(Vector2{ ball.posX, ball.posY }, ball.radius, Rectangle{ left_paddle.GetRect() })) {
-				// If the balls hit the paddle, reverse x direction.  Depending on if ball hits top or bottom half of the paddle, bounce in that direction
+				// If the balls hit the paddle, play sound and reverse x direction.  
+				PlaySound(PADDLE_HIT_FX);
+				// Depending on if ball hits top or bottom half of the paddle, bounce in that direction
 				if (ball.speedX < 0) {
 					ball.speedX *= -1.1f;
 					ball.speedY = (ball.posY - left_paddle.posY) / (left_paddle.height / 2) * ball.speedX;
@@ -184,7 +230,9 @@ int main()
 
 			// Handle collisions with the right paddle
 			if (CheckCollisionCircleRec(Vector2{ ball.posX, ball.posY }, ball.radius, Rectangle{ right_paddle.GetRect() })) {
-				// If the balls hit the paddle, reverse x direction.  Depending on if ball hits top or bottom half of the paddle, bounce in that direction
+				// If the balls hit the paddle, play sound and reverse x direction.
+				PlaySound(PADDLE_HIT_FX);
+				// Depending on if ball hits top or bottom half of the paddle, bounce in that direction
 				if (ball.speedX > 0) {
 					ball.speedX *= -1.1f;
 					ball.speedY = (ball.posY - right_paddle.posY) / (right_paddle.height / 2) * -ball.speedX;
@@ -195,48 +243,60 @@ int main()
 			// If ball goes off of the left side of the screen, player 2 is the winner
 			if (ball.posX < 0)
 			{
-				winner_text = "Right Player Wins!!";
+				PlaySound(WINNER_FX);
+				ball.posX = 0;
+				ball.speedX = 0;
+				ball.speedY = 0;
+
+				// Update the winner message to show the winner screen
+				WINNER_TEXT = "Right Player Wins!!";
 			}
 
 			// If ball goes off of the left side of the screen, player 1 is the winner
 			if (ball.posX > GetScreenWidth())
 			{
-				winner_text = "Left Player Wins!!";
+				PlaySound(WINNER_FX);
+				ball.posX = GetScreenWidth();
+				ball.speedX = 0;
+				ball.speedY = 0;
+
+				// Update the winner message to show the winner screen
+				WINNER_TEXT = "Left Player Wins!!";
+			}
+
+			// Draw the winner message if we detect a win condition
+			if (WINNER_TEXT) {
+				int WINNER_TEXT_width = MeasureText(WINNER_TEXT, TITLE_SIZE);
+				int restart_msg_width = MeasureText(RESTART_MSG, CONTROLS_SIZE);
+
+				// Display winner message to user
+				DrawText(WINNER_TEXT, (GetScreenWidth() / 2.0f) - (WINNER_TEXT_width / 2), (GetScreenHeight() / 2.0f), TITLE_SIZE, YELLOW);
+				DrawText(RESTART_MSG, (GetScreenWidth() / 2.0f) - (restart_msg_width / 2), (GetScreenHeight() / 2.0f) + 160, CONTROLS_SIZE, WHITE);
 			}
 
 			// Restart the game using SPACE_BAR
-			if (winner_text && IsKeyPressed(KEY_SPACE)) {
+			if (WINNER_TEXT && IsKeyPressed(KEY_SPACE)) {
 				ball.posX = GetScreenWidth() / 2.0f;
 				ball.posY = GetScreenHeight() / 2.0f;
 				ball.speedX = 300;
 				ball.speedY = 300;
-				winner_text = nullptr;
+				WINNER_TEXT = nullptr;
 			}
 
 			// Go back to title screen using B
-			if (winner_text && IsKeyPressed(KEY_B)) {
+			if (WINNER_TEXT && IsKeyPressed(KEY_B)) {
 				// Reset our ball position
 				// TODO: Alter this to use a random position 
-				ball.posX = GetScreenWidth() / 2.0f; 
+				ball.posX = GetScreenWidth() / 2.0f;
 				ball.posY = GetScreenHeight() / 2.0f;
 				ball.speedX = 300;
 				ball.speedY = 300;
 
 				// Set the winner text to a null pointer to hide winner message
-				winner_text = nullptr;
+				WINNER_TEXT = nullptr;
 
 				// Set the title text to show the title screen
-				title_text = "LE PONG";
-			}
-
-			// Draw the winner message if we detect a win condition
-			if (winner_text) {
-				int winner_text_width = MeasureText(winner_text, 60);
-				int restart_msg_width = MeasureText(restart_msg, 24);
-
-				DrawText(winner_text, (GetScreenWidth() / 2.0f) - (winner_text_width / 2), (GetScreenHeight() / 2.0f), 60, YELLOW);
-				DrawText(restart_msg, (GetScreenWidth() / 2.0f) - (restart_msg_width / 2), (GetScreenHeight() / 2.0f) + 160, 24, WHITE);
-
+				TITLE_TEXT = "LE PONG";
 			}
 
 			// Draw the ball and paddles
@@ -245,20 +305,30 @@ int main()
 			right_paddle.Draw();
 		}
 
-		// Toggle FPS with F key
+
 		if (IsKeyPressed(KEY_F)) {
-			show_fps = !show_fps;
+			show_fps = !show_fps;	// Toggle FPS with F key
 		}
 
-		// Show FPS on the screen
 		if (show_fps) {
-			DrawFPS(10, 10);
+			DrawFPS(10, 10);	// Show FPS on the screen	
 		}
 
-		// Kill all drawing functions
-		EndDrawing();
+		EndDrawing();		// Kill all drawing functions
 	}
 
+
+	// Unload sound data
+	UnloadMusicStream(TITLE_MUSIC);
+	UnloadSound(PADDLE_HIT_FX);
+	//UnloadSound(side_hit_fx);
+	UnloadSound(WINNER_FX);
+	//UnloadSound(crowd_fx);
+
+	// Close audio device
+	CloseAudioDevice();
+
+	// Close down the window
 	CloseWindow();
 	return 0;
 }
